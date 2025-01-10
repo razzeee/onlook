@@ -4,11 +4,13 @@ import type { AppState, ProjectsCache } from '@onlook/models/settings';
 import { makeAutoObservable } from 'mobx';
 import { nanoid } from 'nanoid/non-secure';
 import { invokeMainChannel, sendAnalytics } from '../utils';
+import { HostingManager } from './hosting';
 import { RunManager } from './run';
 
 export class ProjectsManager {
     private activeProject: Project | null = null;
     private activeRunManager: RunManager | null = null;
+    private activeHostingManager: HostingManager | null = null;
     private projectList: Project[] = [];
 
     constructor() {
@@ -17,22 +19,34 @@ export class ProjectsManager {
     }
 
     async restoreProjects() {
-        const cachedProjects = (await invokeMainChannel(
+        const cachedProjects: ProjectsCache | null = await invokeMainChannel(
             MainChannels.GET_PROJECTS,
-        )) as ProjectsCache;
+        );
         if (!cachedProjects || !cachedProjects.projects) {
             console.error('Failed to restore projects');
             return;
         }
         this.projectList = cachedProjects.projects;
 
-        const appState = (await invokeMainChannel(MainChannels.GET_APP_STATE)) as AppState;
+        const appState: AppState | null = await invokeMainChannel(MainChannels.GET_APP_STATE);
+        if (!appState) {
+            console.error('Failed to restore app state');
+            return;
+        }
         if (appState.activeProjectId) {
             this.project = this.projectList.find((p) => p.id === appState.activeProjectId) || null;
         }
     }
 
-    createProject(name: string, url: string, folderPath: string, runCommand: string): Project {
+    createProject(
+        name: string,
+        url: string,
+        folderPath: string,
+        commands: {
+            run: string;
+            build: string;
+        },
+    ): Project {
         const newProject: Project = {
             id: nanoid(),
             name,
@@ -40,7 +54,10 @@ export class ProjectsManager {
             folderPath,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            runCommand,
+            commands,
+            previewImg: null,
+            settings: null,
+            hosting: null,
         };
 
         const updatedProjects = [...this.projectList, newProject];
@@ -56,10 +73,8 @@ export class ProjectsManager {
         }
     }
 
-    saveActiveProject() {
-        invokeMainChannel(MainChannels.UPDATE_APP_STATE, {
-            activeProjectId: this.project?.id,
-        });
+    updateAppState(appState: AppState) {
+        invokeMainChannel(MainChannels.REPLACE_APP_STATE, appState);
     }
 
     saveProjects() {
@@ -82,18 +97,35 @@ export class ProjectsManager {
         return this.activeRunManager;
     }
 
+    get hosting(): HostingManager | null {
+        return this.activeHostingManager;
+    }
+
     set project(newProject: Project | null) {
         if (!newProject || newProject.id !== this.activeProject?.id) {
-            this.activeRunManager?.dispose();
-            this.activeRunManager = null;
+            this.disposeManagers();
         }
 
         if (newProject) {
-            this.activeRunManager = new RunManager(newProject);
+            this.setManagers(newProject);
         }
 
         this.activeProject = newProject;
-        this.saveActiveProject();
+        this.updateAppState({
+            activeProjectId: this.project?.id ?? null,
+        });
+    }
+
+    setManagers(project: Project) {
+        this.activeRunManager = new RunManager(project);
+        this.activeHostingManager = new HostingManager(this, project);
+    }
+
+    disposeManagers() {
+        this.activeRunManager?.dispose();
+        this.activeHostingManager?.dispose();
+        this.activeRunManager = null;
+        this.activeHostingManager = null;
     }
 
     get projects() {

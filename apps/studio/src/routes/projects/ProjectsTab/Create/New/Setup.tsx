@@ -6,7 +6,7 @@ import { Button } from '@onlook/ui/button';
 import { CardDescription, CardTitle } from '@onlook/ui/card';
 import { Icons } from '@onlook/ui/icons';
 import { Progress } from '@onlook/ui/progress';
-import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { useEffect, useState } from 'react';
 import type { StepComponent } from '../withStepProps';
 
@@ -143,7 +143,7 @@ const NewSetupProject: StepComponent = ({ props, variant }) => {
             return (
                 <p>
                     {`Please `}
-                    <a href="mailto:support@onlook.dev" className="underline">
+                    <a href="mailto:support@onlook.com" className="underline">
                         {'contact support'}
                     </a>
                     {` for help. Or run 'npx onlook create' in your terminal instead.`}

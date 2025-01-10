@@ -9,11 +9,20 @@
     },
     files: ['dist-electron', 'dist'],
     mac: {
-        artifactName: '${productName}.${ext}',
+        artifactName: '${productName}-${arch}.${ext}',
         category: 'public.app-category.developer-tools',
         hardenedRuntime: true,
         gatekeeperAssess: false,
-        target: ['zip', 'dmg'],
+        target: [
+            {
+                target: 'dmg',
+                arch: ['x64', 'arm64'],
+            },
+            {
+                target: 'zip',
+                arch: ['x64', 'arm64'],
+            },
+        ],
     },
     win: {
         target: [
@@ -23,6 +32,16 @@
             },
         ],
         artifactName: '${productName}-setup.${ext}',
+        signtoolOptions: {
+            publisherName: 'On Off, Inc',
+        },
+        azureSignOptions: {
+            certificateProfileName: 'public-trust-onlook',
+            codeSigningAccountName: 'trusted-onlook',
+            endpoint: 'https://eus.codesigning.azure.net',
+            timestampDigest: 'SHA256',
+            timestampRfc3161: 'http://timestamp.acs.microsoft.com',
+        },
     },
     linux: {
         target: [

@@ -1,47 +1,53 @@
-import { z } from 'zod';
+import { Orientation, Theme } from '../constants';
 
-export const RectPositionSchema = z.object({
-    x: z.number(),
-    y: z.number(),
-});
+export interface RectPosition {
+    x: number;
+    y: number;
+}
 
-export const RectDimensionSchema = z.object({
-    width: z.number(),
-    height: z.number(),
-});
+export interface RectDimension {
+    width: number;
+    height: number;
+}
 
-export const FrameSettingsSchema = z.object({
-    id: z.string(),
-    url: z.string(),
-    position: RectPositionSchema,
-    dimension: RectDimensionSchema,
-    linkedIds: z.array(z.string()).nullable(),
-    duplicate: z.boolean().nullable(),
-});
+export interface FrameSettings {
+    id: string;
+    url: string;
+    position: RectPosition;
+    dimension: RectDimension;
+    linkedIds: string[] | null;
+    duplicate: boolean | null;
+    orientation: Orientation | null;
+    aspectRatioLocked: boolean | null;
+    device: string | null;
+    theme: Theme | null;
+}
 
-export const ProjectSettingsSchema = z.object({
-    scale: z.number().optional(),
-    frames: z.array(FrameSettingsSchema).optional(),
-    position: RectPositionSchema.optional(),
-});
+export interface ProjectSettings {
+    scale: number | null;
+    frames: FrameSettings[] | null;
+    position: RectPosition | null;
+}
 
-export const ProjectSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    folderPath: z.string(),
-    url: z.string(),
-    previewImg: z.string().optional(),
-    createdAt: z.string(), // ISO 8601
-    updatedAt: z.string(), // ISO 8601
-    settings: ProjectSettingsSchema.optional(),
-    runCommand: z.string().optional(),
-});
+export interface HostingSettings {
+    url: string | null;
+}
 
-export type Project = z.infer<typeof ProjectSchema>;
-export type FrameSettings = z.infer<typeof FrameSettingsSchema>;
-export type ProjectSettings = z.infer<typeof ProjectSettingsSchema>;
-export type RectPosition = z.infer<typeof RectPositionSchema>;
-export type RectDimension = z.infer<typeof RectDimensionSchema>;
+export interface Project {
+    id: string;
+    name: string;
+    folderPath: string;
+    url: string;
+    previewImg: string | null;
+    createdAt: string;
+    updatedAt: string;
+    settings: ProjectSettings | null;
+    commands: {
+        build?: string;
+        run?: string;
+    } | null;
+    hosting: HostingSettings | null;
+}
 
 export enum WindowCommand {
     MINIMIZE = 'minimize',

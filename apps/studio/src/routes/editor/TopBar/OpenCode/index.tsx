@@ -1,4 +1,4 @@
-import { useEditorEngine, useProjectsManager } from '@/components/Context';
+import { useEditorEngine, useProjectsManager, useUserManager } from '@/components/Context';
 import { invokeMainChannel } from '@/lib/utils';
 import { MainChannels } from '@onlook/models/constants';
 import type { DomElement } from '@onlook/models/element';
@@ -13,14 +13,15 @@ import {
 import { Icons } from '@onlook/ui/icons';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@onlook/ui/tooltip';
 import { cn } from '@onlook/ui/utils';
-import { AnimatePresence, motion, useAnimate } from 'framer-motion';
 import { observer } from 'mobx-react-lite';
+import { AnimatePresence, motion, useAnimate } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 import { IDE } from '/common/ide';
 
 const OpenCode = observer(() => {
     const editorEngine = useEditorEngine();
-    const projectManager = useProjectsManager();
+    const projectsManager = useProjectsManager();
+    const userManager = useUserManager();
 
     const [folderPath, setFolder] = useState<string | null>(null);
     const [instance, setInstance] = useState<string | null>(null);
@@ -33,8 +34,8 @@ const OpenCode = observer(() => {
     const IDEIcon = Icons[ide.icon];
 
     useEffect(() => {
-        if (projectManager.project) {
-            const folder = projectManager.project.folderPath;
+        if (projectsManager.project) {
+            const folder = projectsManager.project.folderPath;
             setFolder(folder);
         }
     }, []);
@@ -70,13 +71,13 @@ const OpenCode = observer(() => {
     }
 
     function updateIde(newIde: IDE) {
-        invokeMainChannel(MainChannels.UPDATE_USER_SETTINGS, { ideType: newIde.type });
+        userManager.updateUserSettings({ ideType: newIde.type });
         setIde(newIde);
     }
 
     const ideCharacters = useMemo(() => {
         const prefixChars = 'Open in '.split('').map((ch, index) => ({
-            id: `prefix_${index}`,
+            id: `opencode_prefix_${index}`,
             label: ch === ' ' ? '\u00A0' : ch,
         }));
         const entities = `${ide}`.split('').map((ch) => ch);
@@ -87,7 +88,7 @@ const OpenCode = observer(() => {
             const count = entities.slice(0, index).filter((e) => e === entity).length;
 
             characters.push({
-                id: `${entity}${count + 1}`,
+                id: `opencode_${entity}${count + 1}`,
                 label: characters.length === 0 ? entity.toUpperCase() : entity,
             });
         }
@@ -105,7 +106,7 @@ const OpenCode = observer(() => {
     }
 
     return (
-        <div className="inline-flex items-center justify-center whitespace-nowrap overflow-hidden rounded-md font-medium transition-colors focus-visible:outline-none h-8 border border-input shadow-sm bg-background hover:bg-background-onlook hover:text-accent-foreground text-xs space-x-0 p-0">
+        <div className="inline-flex items-center justify-center whitespace-nowrap overflow-hidden rounded-md transition-colors focus-visible:outline-none h-8 border border-input shadow-sm bg-background hover:bg-background-onlook hover:text-accent-foreground hover:text-foreground-active/90 hover:border-foreground-active/30 text-xs space-x-0 p-0 mr-1">
             <Tooltip>
                 <TooltipTrigger asChild>
                     <div>
@@ -166,7 +167,7 @@ const OpenCode = observer(() => {
                                 <DropdownMenuItem
                                     className="text-xs"
                                     onSelect={() => {
-                                        viewSource(folderPath);
+                                        viewSourceFile(folderPath);
                                     }}
                                     onMouseEnter={() => setIsFolderHovered(true)}
                                     onMouseLeave={() => setIsFolderHovered(false)}

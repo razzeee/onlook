@@ -1,27 +1,36 @@
-import type { ChatMessageContext, UserContentBlock } from '@onlook/models/chat';
-import { ChatMessageRole, ChatMessageType, type UserChatMessage } from '@onlook/models/chat';
-import type { CoreUserMessage } from 'ai';
+import { PromptProvider } from '@onlook/ai/src/prompt/provider';
+import type { ChatMessageContext, ImageMessageContext } from '@onlook/models/chat';
+import {
+    ChatMessageRole,
+    ChatMessageType,
+    MessageContextType,
+    type UserChatMessage,
+} from '@onlook/models/chat';
+import type { CoreUserMessage, ImagePart, TextPart } from 'ai';
 import { nanoid } from 'nanoid/non-secure';
-import { getFormattedUserPrompt, getStrippedContext } from '../prompt';
 
 export class UserChatMessageImpl implements UserChatMessage {
     id: string;
     type: ChatMessageType.USER = ChatMessageType.USER;
     role: ChatMessageRole.USER = ChatMessageRole.USER;
-    content: UserContentBlock[];
+    content: string;
     context: ChatMessageContext[] = [];
+    promptProvider: PromptProvider;
+
+    // Extra behavior parameters
+    hydratedContent: string;
 
     constructor(content: string, context: ChatMessageContext[] = []) {
         this.id = nanoid();
-        this.content = [{ type: 'text', text: content }];
+        this.content = content;
         this.context = context;
+        this.promptProvider = new PromptProvider();
+        this.hydratedContent = this.createHydratedContent();
     }
 
     static fromJSON(data: UserChatMessage): UserChatMessageImpl {
-        const message = new UserChatMessageImpl('');
+        const message = new UserChatMessageImpl(data.content, data.context);
         message.id = data.id;
-        message.content = data.content;
-        message.context = data.context;
         return message;
     }
 
@@ -35,26 +44,36 @@ export class UserChatMessageImpl implements UserChatMessage {
         };
     }
 
-    editContent(content: string) {
-        this.content = [{ type: 'text', text: content }];
+    createHydratedContent() {
+        return this.promptProvider.getUserMessage(this.content, {
+            files: this.context.filter((c) => c.type === MessageContextType.FILE),
+            highlights: this.context.filter((c) => c.type === MessageContextType.HIGHLIGHT),
+        });
     }
 
-    getStringContent(): string {
-        return this.content.map((c) => c.text).join('\n');
-    }
-
-    toPreviousMessage(): CoreUserMessage {
-        const strippedContext: ChatMessageContext[] = getStrippedContext(this.context);
+    getImagePart(image: ImageMessageContext): ImagePart {
         return {
-            role: this.role,
-            content: getFormattedUserPrompt(this.getStringContent(), strippedContext),
+            type: 'image',
+            image: image.content,
+            mimeType: image.mimeType,
         };
     }
 
-    toCurrentMessage(): CoreUserMessage {
+    getTextPart(): TextPart {
+        return {
+            type: 'text',
+            text: this.hydratedContent,
+        };
+    }
+
+    toCoreMessage(): CoreUserMessage {
+        const imageParts = this.context
+            .filter((c) => c.type === MessageContextType.IMAGE)
+            .map(this.getImagePart);
+        const textPart = this.getTextPart();
         return {
             role: this.role,
-            content: getFormattedUserPrompt(this.getStringContent(), this.context),
+            content: [...imageParts, textPart],
         };
     }
 }

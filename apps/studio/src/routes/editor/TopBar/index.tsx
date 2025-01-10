@@ -93,6 +93,7 @@ const EditorTopBar = observer(
                         handleScale={handleScale}
                     />
                     <OpenCode />
+                    {/* <ShareProject /> */}
                 </div>
             </div>
         );

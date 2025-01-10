@@ -15,15 +15,32 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 
 const ProjectSettingsModal = observer(
-    ({ children, project }: { children: React.ReactNode; project?: Project | null }) => {
+    ({
+        children,
+        project,
+        open: controlledOpen,
+        onOpenChange: controlledOnOpenChange,
+    }: {
+        children?: React.ReactNode;
+        project?: Project | null;
+        open?: boolean;
+        onOpenChange?: (open: boolean) => void;
+    }) => {
         const projectsManager = useProjectsManager();
-        const [isOpen, setIsOpen] = useState(false);
         const projectToUpdate = project || projectsManager.project;
         const [formValues, setFormValues] = useState({
             name: projectToUpdate?.name || '',
             url: projectToUpdate?.url || '',
-            runCommand: projectToUpdate?.runCommand || 'npm run dev',
+            folderPath: projectToUpdate?.folderPath || '',
+            runCommand: projectToUpdate?.commands?.run || 'npm run dev',
+            buildCommand: projectToUpdate?.commands?.build || 'npm run build',
         });
+
+        const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+
+        // Use controlled props if provided, otherwise use internal state
+        const isOpen = controlledOpen ?? uncontrolledOpen;
+        const onOpenChange = controlledOnOpenChange ?? setUncontrolledOpen;
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             setFormValues({
@@ -39,19 +56,19 @@ const ProjectSettingsModal = observer(
                     ...formValues,
                 });
             }
-            setIsOpen(false);
+            onOpenChange?.(false);
         };
 
         return (
-            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <Dialog open={isOpen} onOpenChange={onOpenChange}>
                 <DialogTrigger asChild>{children}</DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>Project Settings</DialogTitle>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-4 text-small">
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">
+                            <Label htmlFor="name" className="text-right text-foreground-secondary">
                                 Name
                             </Label>
                             <Input
@@ -62,7 +79,7 @@ const ProjectSettingsModal = observer(
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="url" className="text-right">
+                            <Label htmlFor="url" className="text-right text-foreground-secondary">
                                 Url
                             </Label>
                             <Input
@@ -73,8 +90,25 @@ const ProjectSettingsModal = observer(
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="runCommand" className="text-right">
-                                Command
+                            <Label
+                                htmlFor="folderPath"
+                                className="text-right text-foreground-secondary"
+                            >
+                                Path
+                            </Label>
+                            <Input
+                                id="folderPath"
+                                value={formValues.folderPath}
+                                onChange={handleChange}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label
+                                htmlFor="runCommand"
+                                className="text-right text-foreground-secondary"
+                            >
+                                Run
                             </Label>
                             <Input
                                 id="runCommand"
@@ -83,9 +117,23 @@ const ProjectSettingsModal = observer(
                                 className="col-span-3"
                             />
                         </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label
+                                htmlFor="buildCommand"
+                                className="text-right text-foreground-secondary"
+                            >
+                                Build
+                            </Label>
+                            <Input
+                                id="buildCommand"
+                                value={formValues.buildCommand}
+                                onChange={handleChange}
+                                className="col-span-3"
+                            />
+                        </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={() => setIsOpen(false)} variant={'ghost'}>
+                        <Button onClick={() => onOpenChange?.(false)} variant={'ghost'}>
                             Cancel
                         </Button>
                         <Button onClick={handleSave} variant={'outline'}>

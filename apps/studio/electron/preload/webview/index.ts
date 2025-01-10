@@ -1,16 +1,21 @@
 import { setApi } from './api';
 import { processDom } from './dom';
 import { listenForEvents } from './events';
+import cssManager from './style';
 
 function handleBodyReady() {
     setApi();
     listenForEvents();
     keepDomUpdated();
+    cssManager.injectDefaultStyles();
 }
 
 function keepDomUpdated() {
-    processDom();
-    setInterval(() => processDom(), 5000);
+    const interval = setInterval(() => {
+        if (processDom()) {
+            clearInterval(interval);
+        }
+    }, 5000);
 }
 
 const handleDocumentBody = setInterval(() => {

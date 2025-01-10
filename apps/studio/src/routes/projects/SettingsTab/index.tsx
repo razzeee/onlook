@@ -1,3 +1,4 @@
+import { useUserManager } from '@/components/Context';
 import { invokeMainChannel } from '@/lib/utils';
 import { MainChannels } from '@onlook/models/constants';
 import { IdeType } from '@onlook/models/ide';
@@ -17,6 +18,7 @@ import { getRandomSettingsMessage } from '../helpers';
 import { IDE } from '/common/ide';
 
 const SettingsTab = observer(({ setCurrentTab }: { setCurrentTab: (tab: ProjectTabs) => void }) => {
+    const userManager = useUserManager();
     const [isAnalyticsEnabled, setIsAnalyticsEnabled] = useState(false);
     const [ide, setIde] = useState<IDE>(IDE.VS_CODE);
     const [shouldWarnDelete, setShouldWarnDelete] = useState(true);
@@ -33,17 +35,18 @@ const SettingsTab = observer(({ setCurrentTab }: { setCurrentTab: (tab: ProjectT
     }, []);
 
     function updateIde(ide: IDE) {
-        invokeMainChannel(MainChannels.UPDATE_USER_SETTINGS, { ideType: ide.type });
+        userManager.updateUserSettings({ ideType: ide.type });
         setIde(ide);
     }
 
     function updateAnalytics(enabled: boolean) {
-        window.api.send(MainChannels.UPDATE_ANALYTICS_PREFERENCE, enabled);
+        userManager.updateUserSettings({ enableAnalytics: enabled });
+        invokeMainChannel(MainChannels.UPDATE_ANALYTICS_PREFERENCE, enabled);
         setIsAnalyticsEnabled(enabled);
     }
 
     function updateDeleteWarning(enabled: boolean) {
-        invokeMainChannel(MainChannels.UPDATE_USER_SETTINGS, { shouldWarnDelete: enabled });
+        userManager.updateUserSettings({ shouldWarnDelete: enabled });
         setShouldWarnDelete(enabled);
     }
 
@@ -190,14 +193,14 @@ const SettingsTab = observer(({ setCurrentTab }: { setCurrentTab: (tab: ProjectT
                 <div className="w-full h-[fit-content] flex flex-row gap-1 text-gray-400 text-micro">
                     <p>{`Onlook Studio Version ${window.env.APP_VERSION} • `}</p>
                     <button
-                        onClick={() => openExternalLink('https://onlook.dev/privacy-policy')}
+                        onClick={() => openExternalLink('https://onlook.com/privacy-policy')}
                         className="text-gray-400 hover:text-gray-200 underline transition-colors duration-200"
                     >
                         Privacy Policy
                     </button>
                     <p> {'and'} </p>
                     <button
-                        onClick={() => openExternalLink('https://onlook.dev/terms-of-service')}
+                        onClick={() => openExternalLink('https://onlook.com/terms-of-service')}
                         className="text-gray-400 hover:text-gray-200 underline transition-colors duration-200"
                     >
                         Terms of Service
